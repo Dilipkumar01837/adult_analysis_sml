@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gender Income Gap Analysis - Results</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#1d2330;--muted:#5d6678;--line:#dfe3ea;--accent:#2f6fed;--warn:#c4472d;--ok:#1f8a5b;--bar:#9db4d8;--men:#2f6fed;--women:#d6457a}
+@media (prefers-color-scheme:dark){:root{--bg:#12151c;--card:#1b2029;--text:#e7eaf0;--muted:#99a3b5;--line:#2c3340;--accent:#6c9bff;--warn:#ff8a6b;--ok:#4cc58e;--bar:#4a6694;--men:#6c9bff;--women:#ff7fae}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:1.7rem;margin:.2em 0}
+h2{font-size:1.25rem;margin:0 0 .3em}
+.sub{color:var(--muted);margin:0 0 16px}
+.banner{background:#fff3cd;color:#6b4e00;border:1px solid #e6c85c;border-radius:10px;padding:10px 14px;margin:12px 0;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.kpi .label{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
+.kpi .value{font-size:1.9rem;font-weight:700;margin:2px 0}
+.kpi .note{font-size:.88rem;color:var(--muted)}
+section.card{margin:16px 0}
+.say{border-left:4px solid var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);padding:10px 14px;border-radius:0 10px 10px 0;margin:12px 0}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--muted);font-size:12px}
+svg .axis{stroke:var(--line)}
+table{width:100%;border-collapse:collapse;font-size:.92rem;margin-top:8px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-weight:600}
+details{margin-top:10px;color:var(--muted)}
+summary{cursor:pointer;color:var(--accent);font-weight:600}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:.78rem;font-weight:600}
+.tag.yes{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.tag.no{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+footer{color:var(--muted);font-size:.85rem;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Gender Income Gap Analysis</h1>
+  <p class="sub">SDG 5 - Gender Equality &middot; Permutation tests and odds ratios &middot; <span id="meta"></span></p>
+  <div id="banner"></div>
+
+  <div class="grid" id="kpis"></div>
+
+  <section class="card">
+    <h2>1. Is the raw gap just chance?</h2>
+    <p class="sub">Permutation test: shuffle the "male/female" labels thousands of times and see how big a gap pure luck can create.</p>
+    <div id="rates"></div>
+    <div class="say" id="say1"></div>
+    <div id="hist1"></div>
+    <div id="hist2"></div>
+    <details><summary>How to read this</summary>
+      <p>The bars in the chart are the gaps produced when labels are shuffled randomly (so there is no real link between gender and income). The vertical line is the real gap. If the line sits far outside the shuffled gaps, chance is a poor explanation. The p-value is the share of shuffles that were at least as extreme as the real gap.</p>
+      <p>The second chart shuffles gender only <em>inside</em> groups of people with the same education level and occupation. Its centre is not zero, because men and women are spread differently across those groups; that centre is the gap you would expect from that mix alone.</p>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>2. How much remains after comparing like with like?</h2>
+    <p class="sub">Odds ratio (OR) for women vs men. OR = 1 means no difference; below 1 means lower odds for women.</p>
+    <div id="forest1"></div>
+    <div class="say" id="say2"></div>
+    <table id="tab2"></table>
+    <details><summary>How to read this</summary>
+      <p>Each row adds more controls: age and weekly hours, then years of education, then occupation. If the OR moves toward 1, those factors explain part of the raw gap. If it stays below 1, a gap remains that those variables do not explain. That is not proof of discrimination: other factors may be missing, and education or occupation can themselves be shaped by gender. Odds are not the same as probabilities, but for rare outcomes they behave similarly.</p>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>3. Does the gap depend on education?</h2>
+    <p class="sub">Gender &times; education interaction.</p>
+    <div id="forest2"></div>
+    <div class="say" id="say3"></div>
+    <table id="tab3"></table>
+    <details><summary>How to read this</summary>
+      <p>The likelihood-ratio test asks whether letting the gender gap differ by education fits the data significantly better than a single common gap. A small p-value means the gap really does vary with education. The chart shows the adjusted women-vs-men OR within each education group.</p>
+    </details>
+  </section>
+
+  <section class="card" id="mlsec">
+    <h2>4. Predictive check (machine learning)</h2>
+    <p class="sub">Cross-validated AUC: how well can models predict income &gt; 50K, with and without gender?</p>
+    <div class="say" id="say4"></div>
+    <table id="tab4"></table>
+  </section>
+
+  <section class="card">
+    <h2>Limitations</h2>
+    <ul>
+      <li>The Adult dataset is from the 1994 US census, and income is only "above or below 50K".</li>
+      <li>Results show association, not causation or proof of discrimination.</li>
+      <li>Survey weights are not used; confidence intervals assume a large sample.</li>
+    </ul>
+  </section>
+  <footer>Generated by run_all.py from results.json. This page works offline.</footer>
+</div>
+
+<script>
+const D = __DATA__;
+const $ = id => document.getElementById(id);
+const pct = x => (x*100).toFixed(1)+'%';
+const f2 = x => x.toFixed(2), f3 = x => x.toFixed(3);
+const pgen = p => p < 0.001 ? '&lt; 0.001' : p.toFixed(3);
+const pperm = (p,B) => p <= 1.5/(B+1) ? '&lt; '+(1/(B+1)).toFixed(4) : p.toFixed(4);
+const sig = r => r.ci_high < 1 || r.ci_low > 1;
+const tag = ok => `<span class="tag ${ok?'yes':'no'}">${ok?'clearly different from 1':'not clearly different'}</span>`;
+function orText(r){
+  const w = r.OR < 1 ? `${((1-r.OR)*100).toFixed(0)}% lower` : `${((r.OR-1)*100).toFixed(0)}% higher`;
+  return `women have ${w} odds of earning more than 50K than comparable men`;
+}
+const row = (cells) => '<tr>'+cells.map(c=>`<td>${c}</td>`).join('')+'</tr>';
+const head = (cells) => '<tr>'+cells.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+
+// ---------- charts ----------
+const NS = 'http://www.w3.org/2000/svg';
+function forest(el, rows, xlabel){
+  const W=760, rowH=44, top=14, left=190, right=30, H=top+rows.length*rowH+46;
+  let lo=Math.min(1,...rows.map(r=>r.ci_low))*0.9, hi=Math.max(1,...rows.map(r=>r.ci_high))*1.1;
+  const X = v => left + (Math.log(v)-Math.log(lo))/(Math.log(hi)-Math.log(lo))*(W-left-right);
+  const cand=[0.25,0.33,0.5,0.67,0.75,0.8,0.9,1,1.1,1.25,1.5,2,3,4,6];
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  cand.filter(t=>t>=lo&&t<=hi).forEach(t=>{
+    s+=`<line class="axis" x1="${X(t)}" x2="${X(t)}" y1="${top}" y2="${H-34}" ${t===1?'style="stroke:var(--muted);stroke-dasharray:4 3"':''}/><text x="${X(t)}" y="${H-18}" text-anchor="middle">${t}</text>`;
+  });
+  rows.forEach((r,i)=>{
+    const y=top+i*rowH+rowH/2, c = sig(r)?'var(--warn)':'var(--muted)';
+    s+=`<text x="${left-10}" y="${y+4}" text-anchor="end" style="fill:var(--text)">${r.label}</text>`;
+    s+=`<line x1="${X(r.ci_low)}" x2="${X(r.ci_high)}" y1="${y}" y2="${y}" stroke="${c}" stroke-width="3"/>`;
+    s+=`<circle cx="${X(r.OR)}" cy="${y}" r="6" fill="${c}"/>`;
+    s+=`<text x="${X(r.OR)}" y="${y-10}" text-anchor="middle" style="fill:var(--text);font-weight:600">${f2(r.OR)}</text>`;
+  });
+  s+=`<text x="${(left+W-right)/2}" y="${H-2}" text-anchor="middle">${xlabel} (log scale, 95% CI)</text></svg>`;
+  el.innerHTML=s;
+}
+function hist(el, h, title, note){
+  const W=760,H=230,l=40,r=20,t=30,b=40;
+  const lo=Math.min(h.edges[0],h.observed), hi=Math.max(h.edges[h.edges.length-1],h.observed);
+  const pad=(hi-lo)*0.06, a=lo-pad, z=hi+pad;
+  const X=v=>l+(v-a)/(z-a)*(W-l-r), mx=Math.max(...h.counts);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img"><text x="${l}" y="16" style="fill:var(--text);font-weight:600">${title}</text>`;
+  s+=`<line class="axis" x1="${l}" x2="${W-r}" y1="${H-b}" y2="${H-b}"/>`;
+  h.counts.forEach((c,i)=>{
+    const x0=X(h.edges[i]), x1=X(h.edges[i+1]), bh=c/mx*(H-b-t);
+    s+=`<rect x="${x0}" y="${H-b-bh}" width="${Math.max(1.5,x1-x0-0.5)}" height="${bh}" fill="var(--bar)"/>`;
+  });
+  const xo=X(h.observed);
+  s+=`<line x1="${xo}" x2="${xo}" y1="${t}" y2="${H-b}" stroke="var(--warn)" stroke-width="3"/>`;
+  s+=`<text x="${xo}" y="${t-4}" text-anchor="${xo>W/2?'end':'start'}" style="fill:var(--warn);font-weight:600"> observed gap ${f3(h.observed)} </text>`;
+  const ticks=5; for(let i=0;i<=ticks;i++){const v=a+(z-a)*i/ticks; s+=`<text x="${X(v)}" y="${H-b+16}" text-anchor="middle">${v.toFixed(2)}</text>`;}
+  s+=`<text x="${(l+W-r)/2}" y="${H-4}" text-anchor="middle">${note}</text></svg>`;
+  el.innerHTML=s;
+}
+function rateBars(el, m, f){
+  const W=760,H=96,l=80,max=Math.max(m,f)*1.15;
+  const X=v=>l+v/max*(W-l-30);
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}"><text x="${l-8}" y="30" text-anchor="end" style="fill:var(--text)">Men</text><rect x="${l}" y="14" width="${X(m)-l}" height="24" rx="4" fill="var(--men)"/><text x="${X(m)+6}" y="31" style="fill:var(--text);font-weight:600">${pct(m)}</text>
+  <text x="${l-8}" y="68" text-anchor="end" style="fill:var(--text)">Women</text><rect x="${l}" y="52" width="${X(f)-l}" height="24" rx="4" fill="var(--women)"/><text x="${X(f)+6}" y="69" style="fill:var(--text);font-weight:600">${pct(f)}</text></svg>
+  <p class="sub" style="margin-top:0">Share earning more than 50K</p>`;
+}
+
+// ---------- fill page ----------
+$('meta').textContent = `n = ${D.n.toLocaleString()} (${D.n_female.toLocaleString()} women, ${D.n_male.toLocaleString()} men)`;
+if(D.synthetic_data_warning) $('banner').innerHTML='<div class="banner">SYNTHETIC TEST DATA - these numbers are fake. Re-run with the real dataset before using anything here.</div>';
+
+const raw=D.raw, orows=D.odds_ratios_female_vs_male, adj=orows[orows.length-1], ic=D.interaction_continuous;
+const gapPP=(raw.gap*100).toFixed(1);
+const kp=[
+ ['Raw gap', gapPP+' pts', `Men ${pct(raw.rate_male)} vs women ${pct(raw.rate_female)} above 50K`],
+ ['Permutation p-value', pperm(raw.perm_p,raw.n_perm), raw.perm_p<0.05?'Chance alone is a very poor explanation':'Could plausibly be chance'],
+ ['Adjusted odds ratio', f2(adj.OR), `95% CI ${f2(adj.ci_low)} to ${f2(adj.ci_high)} (all controls)`],
+ ['Education interaction', 'p = '+pgen(ic.LR_test.p), ic.LR_test.p<0.05?'Gap changes with education':'No clear change with education']
+];
+$('kpis').innerHTML=kp.map(k=>`<div class="card kpi"><div class="label">${k[0]}</div><div class="value">${k[1]}</div><div class="note">${k[2]}</div></div>`).join('');
+
+// section 1
+rateBars($('rates'), raw.rate_male, raw.rate_female);
+const sp=D.stratified_perm;
+$('say1').innerHTML=`The raw gap is <b>${gapPP} percentage points</b> (bootstrap 95% CI ${(raw.gap_boot_ci95[0]*100).toFixed(1)} to ${(raw.gap_boot_ci95[1]*100).toFixed(1)}). After ${raw.n_perm.toLocaleString()} random shuffles the permutation p-value is <b>${pperm(raw.perm_p,raw.n_perm)}</b>`+
+ (raw.perm_p<0.05?`, so a gap this large almost never appears by chance.`:`, so this gap is within what chance can produce.`)+
+ ` Comparing only people with the same education group and occupation, the p-value is <b>${pperm(sp.p,raw.n_perm)}</b>; the mix of jobs and education alone would produce a gap of ${(sp.expected_gap_from_composition*100).toFixed(1)} points.`;
+hist($('hist1'), D.perm_hist.raw, 'Shuffled gaps vs the real gap (all people)', 'Male minus female rate of >50K');
+hist($('hist2'), D.perm_hist.strat, 'Shuffled within education x occupation groups', 'Male minus female rate of >50K');
+
+// section 2
+forest($('forest1'), orows.map(r=>({...r,label:r.model})), 'Odds ratio, women vs men');
+const sh=D.share_of_log_odds_gap_explained_by_covariates;
+$('say2').innerHTML=`With every control included, ${orText(adj)} (OR ${f2(adj.OR)}, 95% CI ${f2(adj.ci_low)} to ${f2(adj.ci_high)}). `+
+ (sh>=0?`Age, hours, education and occupation account for about <b>${(sh*100).toFixed(0)}%</b> of the raw gap (on the log-odds scale); the remainder is unexplained by these variables.`
+       :`These controls do not shrink the gap; it is slightly larger after adjustment (${(sh*100).toFixed(0)}% change on the log-odds scale).`);
+$('tab2').innerHTML=head(['Model','Odds ratio','95% CI','p-value','Verdict'])+orows.map(r=>row([r.model,f3(r.OR),`${f3(r.ci_low)} to ${f3(r.ci_high)}`,pgen(r.p),tag(sig(r))])).join('');
+
+// section 3
+const g=D.female_OR_by_education;
+forest($('forest2'), g.map(r=>({...r,label:`${r.edu_group} (n=${r.n.toLocaleString()})`})), 'Adjusted odds ratio, women vs men');
+const gp=D.interaction_by_group_LR.p;
+let dir = ic.OR>1?'rises':'falls';
+$('say3').innerHTML=`Per extra year of education, the women-vs-men odds ratio gets multiplied by <b>${f3(ic.OR)}</b> (95% CI ${f3(ic.ci_low)} to ${f3(ic.ci_high)}; likelihood-ratio p = ${pgen(ic.LR_test.p)}). `+
+ (ic.LR_test.p<0.05?`The odds ratio ${dir} with education, so the gap is not the same at every education level`+(adj.OR<1?(ic.OR>1?' (it narrows with more education).':' (it widens with more education).'):'.'):`There is no clear evidence that the gap changes with education.`)+
+ ` Using four education groups instead, the test gives p = ${pgen(gp)}.`;
+$('tab3').innerHTML=head(['Education group','n','Women vs men OR','95% CI','Verdict'])+g.map(r=>row([r.edu_group,r.n.toLocaleString(),f3(r.OR),`${f3(r.ci_low)} to ${f3(r.ci_high)}`,tag(sig(r))])).join('');
+
+// section 4
+if(D.ml_auc){
+  const gains=D.ml_auc.map(m=>Math.abs(m.AUC_gain));
+  $('say4').innerHTML= Math.max(...gains)<0.005
+   ? 'Adding gender barely changes predictive accuracy: occupation, education, age and hours already carry most of the information.'
+   : 'Adding gender changes predictive accuracy noticeably; see the table.';
+  $('tab4').innerHTML=head(['Model','AUC without gender','AUC with gender','Change'])+D.ml_auc.map(m=>row([m.model,m.AUC_without_gender.toFixed(4),m.AUC_with_gender.toFixed(4),(m.AUC_gain>=0?'+':'')+m.AUC_gain.toFixed(4)])).join('');
+} else { $('mlsec').style.display='none'; }
+</script>
+</body>
+</html>
